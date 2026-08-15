@@ -1,7 +1,7 @@
 # Lista de Proveedores de Trenes a Escala G y Accesorios en Asia
 
 Los principales proveedores, empresas de fabricación Original (OEM/ODM) y sitios de exportación especializados en trenes a escala (incluida la Escala G), vías de latón y plástico, repuestos y accesorios en China, Corea del Sur y Japón incluyen empresas independientes del canal mayorista masivo (como Alibaba o AliExpress).
-s
+
 | Empresa / Fabricante | País | Especialidad / Productos | Canal / Sitio Web | Se puede ver la Pagina? | Observaciones |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Korea-Brass Co., Ltd.** | Corea del Sur | Locomotoras y vagones de escala en latón fundido, repuestos de alta precisión. | [gobizkorea.com](https://mktcso.gobizkorea.com/) | ✅ |
