@@ -4,7 +4,7 @@ Actúa como un investigador técnico especializado en trenes a escala G, sistema
 
 Realiza una investigación profunda sobre locomotoras de la marca:
 
-**MARCA: bachmann**
+**MARCA: USA Trains**
 
 El propósito es identificar locomotoras DCC viables para pruebas de tracción, automatización y operación prolongada, y clasificarlas por su arquitectura electromecánica interna.
 
@@ -392,4 +392,4 @@ La investigación puede tomar el tiempo necesario. Da prioridad a la exactitud, 
 
 Si el volumen de información es demasiado grande para una sola respuesta, divide el trabajo en entregas numeradas, pero conserva exactamente las mismas columnas y criterios para que posteriormente puedan combinarse los resultados de distintas marcas.
 
-Entrega todo en un archivo /docs/00-discovery/Bachmann-trains-discovery-Gemini.md 
+Entrega todo en un archivo /docs/00-discovery/Usa-trains-discovery-Gemini.md 
