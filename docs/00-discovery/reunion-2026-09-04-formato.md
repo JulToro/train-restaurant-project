@@ -84,6 +84,9 @@ La cadena local de hamburguesas "Calixto" cuenta actualmente con **5 locales com
 ### Categoría F: Marco Regulatorio y Relaciones con Entidades
 11. *En el ámbito legal de planeación, uso de suelos y licencias sanitarias, ¿cuál ha sido el proceso más complejo de superación durante su expansión? ¿Qué sorpresas normativas o de inspección de salud les tomó por sorpresa y qué nos recomendarían vigilar en nuestro proyecto comercial?*
 
+### Categria G: Seguridad
+12. *¿Como esta el tema de seguridad, vacunas o extorciones?*
+
 ---
 
 ## 6. Siguientes Pasos y Asignación de Tareas
