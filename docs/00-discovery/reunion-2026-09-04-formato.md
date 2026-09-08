@@ -1,6 +1,6 @@
 # Acta de Reunión Estratégica: Viabilidad Legal, Propuesta de Menú e Ingeniería de Tracción
 **Código de Documento:** ACT-2026-11-04  
-**Fecha:** 4 de Noviembre de 2026  
+**Fecha:** 4 de Septiembre de 2026  
 **Estado:** Formalizado / Aprobado por el Equipo Ejecutivo  
 **Ubicación:** Oficina de Planificación del Proyecto  
 **Proyecto:** Restaurante de Transporte Ferroviario Automatizado (Escala G)  
