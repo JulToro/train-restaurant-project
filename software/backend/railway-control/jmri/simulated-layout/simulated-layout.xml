@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="/xml/XSLT/panelfile-5-5-5.xsl" type="text/xsl"?>
+<layout-config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://jmri.org/xml/schema/layout-5-5-5.xsd">
+  <jmriversion>
+    <major>5</major>
+    <minor>16</minor>
+    <test>0</test>
+    <modifier />
+  </jmriversion>
+  <sensors class="jmri.jmrix.internal.configurexml.InternalSensorManagerXml">
+    <defaultInitialState>unknown</defaultInitialState>
+    <sensor inverted="false">
+      <systemName>I2S1</systemName>
+      <userName>IS1</userName>
+    </sensor>
+  </sensors>
+  <turnouts class="jmri.jmrix.internal.configurexml.InternalTurnoutManagerXml">
+    <operations automate="false">
+      <operation name="NoFeedback" class="jmri.configurexml.turnoutoperations.NoFeedbackTurnoutOperationXml" interval="300" maxtries="2" />
+    </operations>
+    <defaultclosedspeed>Normal</defaultclosedspeed>
+    <defaultthrownspeed>Restricted</defaultthrownspeed>
+    <turnout feedback="DIRECT" inverted="false" automate="Off">
+      <systemName>I2T1</systemName>
+      <userName>T1</userName>
+    </turnout>
+  </turnouts>
+  <blocks class="jmri.configurexml.BlockManagerXml">
+    <defaultspeed>Normal</defaultspeed>
+    <block systemName="I2B1">
+      <systemName>I2B1</systemName>
+      <userName>B1</userName>
+    </block>
+    <block systemName="I2B2">
+      <systemName>I2B2</systemName>
+      <userName>B2</userName>
+    </block>
+    <block systemName="I2B3">
+      <systemName>I2B3</systemName>
+      <userName>B3</userName>
+    </block>
+    <block systemName="I2B1" length="0.0" curve="0">
+      <systemName>I2B1</systemName>
+      <userName>B1</userName>
+      <permissive>no</permissive>
+      <occupancysensor>IS1</occupancysensor>
+    </block>
+    <block systemName="I2B2" length="0.0" curve="0">
+      <systemName>I2B2</systemName>
+      <userName>B2</userName>
+      <permissive>no</permissive>
+    </block>
+    <block systemName="I2B3" length="0.0" curve="0">
+      <systemName>I2B3</systemName>
+      <userName>B3</userName>
+      <permissive>no</permissive>
+    </block>
+  </blocks>
+  <signalmastlogics class="jmri.managers.configurexml.DefaultSignalMastLogicManagerXml">
+    <logicDelay>500</logicDelay>
+  </signalmastlogics>
+  <filehistory>
+    <operation>
+      <type>app</type>
+      <date>Mon Oct 12 12:17:07 COT 2026</date>
+      <filename>PanelPro (v5.16.0)</filename>
+    </operation>
+    <operation>
+      <type>Store</type>
+      <date>Mon Oct 12 13:23:59 COT 2026</date>
+      <filename>/Users/julian.toro/DemoGitCopilot/TrainProject/railway-restaurant/software/backend/railway-control/jmri/simulated-layout/simulated-layout.xml</filename>
+    </operation>
+  </filehistory>
+  <!--Written by JMRI version 5.16+R909e15189e on Mon Oct 12 13:23:59 COT 2026-->
+</layout-config>
