@@ -12,7 +12,9 @@ railway-control/
 │   ├── Railway.Jmri.Client/       # Cliente de comunicación con JMRI
 │   └── Railway.Control.Spike/     # Aplicación de consola / Spike para prototipado
 ├── tests/
-│   └── Railway.Core.Tests/        # Pruebas unitarias (xUnit) para Railway.Core
+│   └── Railway.Tests/             # Pruebas xUnit de dominio e integración
+│       ├── Core/                  # Pruebas unitarias del dominio
+│       └── Jmri/                  # Pruebas del cliente con WebSocket local
 ├── README.md
 └── .gitignore
 ```
@@ -22,7 +24,7 @@ railway-control/
 - **`src/Railway.Core`**: Biblioteca de clases (.NET 10) que contiene las entidades de dominio, contratos, interfaces de servicios y lógica de control de trenes y vías.
 - **`src/Railway.Jmri.Client`**: Biblioteca de clases (.NET 10) que implementa la integración y cliente para comunicarse con JMRI (Java Model Railroad Interface).
 - **`src/Railway.Control.Spike`**: Aplicación de consola (.NET 10) utilizada para prototipos rápidos y pruebas directas de control de hardware/servicios.
-- **`tests/Railway.Core.Tests`**: Proyecto de pruebas xUnit (.NET 10) para validar la lógica del dominio.
+- **`tests/Railway.Tests`**: Proyecto de pruebas xUnit (.NET 10). Incluye pruebas unitarias del dominio en `Core/` y pruebas de integración del cliente JMRI en `Jmri/`, usando un servidor WebSocket local sin requerir JMRI instalado.
 
 ## Requisitos Previos
 

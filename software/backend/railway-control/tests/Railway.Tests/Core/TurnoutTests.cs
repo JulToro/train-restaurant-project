@@ -1,7 +1,7 @@
 using Railway.Core.Domain;
 using Xunit;
 
-namespace Railway.Core.Tests;
+namespace Railway.Tests.Core;
 
 public class TurnoutTests
 {

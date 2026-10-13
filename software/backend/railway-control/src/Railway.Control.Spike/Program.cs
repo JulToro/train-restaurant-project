@@ -1,35 +1,57 @@
-﻿using Railway.Core.Domain;
+﻿using Railway.Jmri.Client;
+using Microsoft.Extensions.Configuration;
+
 
 Console.WriteLine("==================================================");
 Console.WriteLine("  Railway Control Spike - Diagnóstico Inicial    ");
 Console.WriteLine("  Ambiente: Simulado / Dominio Aislado (.NET 10)  ");
 Console.WriteLine("==================================================\n");
 
-// 1. Inicialización de entidades del trazado mínimo (B1, IS1, T1)
-Console.WriteLine("[DIAG] 1. Inicializando componentes del trazado...");
-var block = new Block("B1", "Bloque Entrada Estación");
-var sensor = new Sensor("IS1", "Sensor Entrada B1");
-var turnout = new Turnout("T1", "Desvío Principal");
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false)
+    .Build();
 
-Console.WriteLine($"  - Bloque:  {block.Id} ({block.Name}) | Estado: {block.Occupancy}");
-Console.WriteLine($"  - Sensor:  {sensor.Id} ({sensor.Name}) | Estado: {sensor.State}");
-Console.WriteLine($"  - Desvío:  {turnout.Id} ({turnout.Name}) | Posición: {turnout.Position}");
+var section = configuration.GetRequiredSection("Jmri");
 
-// 2. Simulación de transición en memoria
-Console.WriteLine("\n[DIAG] 2. Simulando evento de entrada...");
+var options = new JmriClientOptions
+{
+    WebSocketUrl = section["WebSocketUrl"]
+        ?? throw new InvalidOperationException("Falta Jmri:WebSocketUrl."),
 
-sensor.SetState(SensorState.Active);
-block.MarkOccupied();
-turnout.SetPosition(TurnoutPosition.Closed);
+    ReconnectIntervalSeconds = int.Parse(
+        section["ReconnectIntervalSeconds"]
+        ?? throw new InvalidOperationException(
+            "Falta Jmri:ReconnectIntervalSeconds.")),
 
-Console.WriteLine($"  - Bloque:  {block.Id} ({block.Name}) | Estado: {block.Occupancy}");
-Console.WriteLine($"  - Sensor:  {sensor.Id} ({sensor.Name}) | Estado: {sensor.State}");
-Console.WriteLine($"  - Desvío:  {turnout.Id} ({turnout.Name}) | Posición: {turnout.Position}");
+    MaxReconnectAttempts = int.Parse(
+        section["MaxReconnectAttempts"]
+        ?? throw new InvalidOperationException(
+            "Falta Jmri:MaxReconnectAttempts."))
+};
 
-// 3. Confirmación final de diagnóstico
-Console.WriteLine("\n==================================================");
-Console.WriteLine("  DIAGNÓSTICO EXITOSO:");
-Console.WriteLine("  - Modelo de dominio neutral y operativo.");
-Console.WriteLine("  - Sin dependencias de JMRI ni hardware físico.");
-Console.WriteLine("  - Listo para integración con WebSocket en la siguiente historia.");
-Console.WriteLine("==================================================");
+
+await using var client = new JmriWebSocketClient(options);
+
+client.MessageReceived += message =>
+    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] JMRI: {message}");
+
+client.Connected += () => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Conectado a JMRI.");
+client.Disconnected += reason => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Desconectado: {reason}");
+client.Reconnecting += (attempt, delay) =>
+    Console.WriteLine(
+        $"[{DateTime.Now:HH:mm:ss}] Reconexion: intento {attempt}, " +
+        $"espera de {delay.TotalSeconds} segundos.");
+
+try
+{
+    await client.ConnectAsync();
+    Console.WriteLine("Presiona Enter para salir.");
+    Console.ReadLine();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"No se pudo establecer la conexion con JMRI: {ex.Message}");
+}
+
+
