@@ -27,7 +27,12 @@ var options = new JmriClientOptions
     MaxReconnectAttempts = int.Parse(
         section["MaxReconnectAttempts"]
         ?? throw new InvalidOperationException(
-            "Falta Jmri:MaxReconnectAttempts."))
+            "Falta Jmri:MaxReconnectAttempts.")),
+
+    HeartbeatIntervalSeconds = int.Parse(
+        section["HeartbeatIntervalSeconds"]
+        ?? throw new InvalidOperationException(
+            "Falta Jmri:HeartbeatIntervalSeconds."))
 };
 
 
