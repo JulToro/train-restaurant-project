@@ -238,6 +238,41 @@ public class JmriWebSocketClientTests
     }
 
     [Fact]
+    public async Task ConnectedSubscriberCanResubscribeAfterReconnection()
+    {
+        await using var server = await TestServer.StartAsync();
+        var options = server.CreateOptions();
+        options.HeartbeatIntervalSeconds = 60;
+        await using var client = new JmriWebSocketClient(options);
+        var messages = Channel.CreateUnbounded<string>();
+        var subscription = JsonSerializer.Serialize(new
+        {
+            type = "sensor",
+            method = "get",
+            data = new { name = "I2S1" }
+        });
+        client.Connected += () => client.SendAsync(subscription).GetAwaiter().GetResult();
+        client.MessageReceived += message => messages.Writer.TryWrite(message);
+
+        await client.ConnectAsync().WaitAsync(Timeout);
+        using var firstSocket = await server.NextConnectionAsync();
+        Assert.Equal(subscription, await ReceiveTextAsync(firstSocket));
+        var active = "{\"type\":\"sensor\",\"data\":{\"name\":\"I2S1\",\"state\":2}}";
+        await SendAsync(firstSocket, active);
+        Assert.Equal(active, await messages.Reader.ReadAsync().AsTask().WaitAsync(Timeout));
+
+        await CloseAsync(firstSocket);
+        using var secondSocket = await server.NextConnectionAsync();
+        Assert.Equal(subscription, await ReceiveTextAsync(secondSocket));
+        var inactive = "{\"type\":\"sensor\",\"data\":{\"name\":\"I2S1\",\"state\":4}}";
+        await SendAsync(secondSocket, inactive);
+        Assert.Equal(inactive, await messages.Reader.ReadAsync().AsTask().WaitAsync(Timeout));
+
+        Assert.True(client.IsConnected);
+        Assert.Equal(2, server.RequestCount);
+    }
+
+    [Fact]
     public async Task DisconnectCancelsRetryDelayWithoutAnotherConnectionAttempt()
     {
         await using var server = await TestServer.StartAsync();
