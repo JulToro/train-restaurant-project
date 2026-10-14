@@ -323,20 +323,25 @@ namespace Railway.Jmri.Client
 
             lock (_notificationLock)
             {
-                _notificationTask = _notificationTask.ContinueWith(_ =>
-                {
-                    foreach (var subscriber in subscribers.GetInvocationList())
+                _notificationTask = _notificationTask.ContinueWith
+                (_ =>
                     {
-                        try
+                        foreach (var subscriber in subscribers.GetInvocationList())
                         {
-                            invokeSubscriber(subscriber);
+                            try
+                            {
+                                invokeSubscriber(subscriber);
+                            }
+                            catch (Exception ex)
+                            {
+                                Trace.TraceError("JMRI event subscriber failed: {0}", ex);
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            Trace.TraceError("JMRI event subscriber failed: {0}", ex);
-                        }
-                    }
-                }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+                    }, 
+                    CancellationToken.None, 
+                    TaskContinuationOptions.None, 
+                    TaskScheduler.Default
+                );
             }
         }
 

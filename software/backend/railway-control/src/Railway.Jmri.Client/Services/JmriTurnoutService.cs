@@ -33,21 +33,46 @@ public class JmriTurnoutService
 
         void OnMessageReceived(string message)
         {
-            if (!JmriTurnoutEventParser.TryParse(
-                message, turnoutId, out var reportedPosition))
-                return;
+            try
+            {
+                using var document = JsonDocument.Parse(message);
+                var root = document.RootElement;
 
-            using var document = JsonDocument.Parse(message);
-            var root = document.RootElement;
+                if (root.ValueKind != JsonValueKind.Object ||
+                    !root.TryGetProperty("id", out var id) ||
+                    id.ValueKind != JsonValueKind.Number ||
+                    !id.TryGetInt64(out var responseId) ||
+                    responseId != requestId)
+                    return;
 
-            if (!root.TryGetProperty("id", out var id) ||
-                id.ValueKind != JsonValueKind.Number ||
-                !id.TryGetInt64(out var responseId) ||
-                responseId != requestId)
-                return;
+                if (root.TryGetProperty("type", out var type) &&
+                    type.ValueKind == JsonValueKind.String &&
+                    type.GetString() == "error")
+                {
+                    var detail = root.GetRawText();
 
-            confirmation.TrySetResult(reportedPosition);
+                    if (root.TryGetProperty("data", out var data) &&
+                    data.ValueKind == JsonValueKind.Object &&
+                    data.TryGetProperty("message", out var errorMessage) &&
+                    errorMessage.ValueKind == JsonValueKind.String)
+                    {
+                        detail = errorMessage.GetString()!;
+                    }
 
+                    confirmation.TrySetException(new InvalidOperationException($"Error de JMRI: {detail}"));
+                    return;
+                }
+
+                if (!JmriTurnoutEventParser.TryParse(
+                    message, turnoutId, out var reportedPosition))
+                    return;
+
+                confirmation.TrySetResult(reportedPosition);
+            }
+            catch (JsonException)
+            {
+                 // Un mensaje JSON invalido no confirma esta orden.
+            }
         }
 
         void OnDisconnected(string reason)
