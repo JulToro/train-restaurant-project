@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Railway.Jmri.Client;
 using Railway.Core.Domain;
 using Railway.Core.Services;
+using Railway.Jmri.Client.Parsing;
+using Railway.Jmri.Client.Services;
 
 Console.WriteLine("==================================================");
 Console.WriteLine("  Railway Control Spike - Diagnóstico Inicial    ");
@@ -40,13 +42,21 @@ var options = new JmriClientOptions
 // 1. Crear las entidades.
 var sensor = new Sensor("I2S1", "Sensor de ocupacion B1");
 var block = new Block("B1", "Bloque de entrada");
-
+var turnout = new Turnout("I2T1", "Desvio principal");
 
 // 2. Crear el cliente
 await using var client = new JmriWebSocketClient(options);
 
 client.MessageReceived += message =>
+{
     UpdateBlockOccupancy(message, sensor, block);
+
+    if (JmriTurnoutEventParser.TryParse(message, turnout.Id, out var position))
+    {
+        turnout.SetPosition(position);
+        Console.WriteLine($"Turnout {turnout.Id} state: {position}");
+    }
+};
 
 client.Connected += () =>
 {
@@ -64,11 +74,21 @@ client.Connected += () =>
         // Connected se ejecuta en la cola de notificaciones, independiente de la recepcion.
         client.SendAsync(subscription).GetAwaiter().GetResult();
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Solicitud de suscripcion enviada: {sensor.Id}.");
+
+
+        var turnoutSubscription = JsonSerializer.Serialize(new
+        {
+            type = "turnout",
+            method = "get",
+            data = new { name = turnout.Id }
+        });
+        client.SendAsync(turnoutSubscription).GetAwaiter().GetResult();
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Solicitud de suscripcion enviada: {turnout.Id}.");
     }
     catch (Exception ex)
     {
         Console.Error.WriteLine(
-            $"[{DateTime.Now:HH:mm:ss}] No se pudo enviar la suscripcion a {sensor.Id}: {ex.Message}");
+            $"[{DateTime.Now:HH:mm:ss}] No se pudo enviar suscripciones: {ex.Message}");
     }
 };
 
@@ -83,8 +103,9 @@ try
 {
     await client.ConnectAsync();
 
-    Console.WriteLine("Presiona Enter para salir.");
-    Console.ReadLine();
+    var turnoutService = new JmriTurnoutService(client);
+
+    await ConsoleMenuAsync(turnoutService, turnout.Id);
 }
 catch (Exception ex)
 {
@@ -93,28 +114,10 @@ catch (Exception ex)
 
 static void UpdateBlockOccupancy(string message, Sensor sensor, Block block)
 {
-    using var document = JsonDocument.Parse(message);
-    var root = document.RootElement;
-
-    if(root.ValueKind != JsonValueKind.Object || 
-       !root.TryGetProperty("type", out var type) ||
-       type.GetString() != "sensor"
-       )
+    if (!JmriSensorEventParser.TryParse(message, sensor.Id, out var state))
         return;
 
-    var data = root.GetProperty("data");
-
-    if(data.GetProperty("name").GetString() != sensor.Id)
-        return;
-    
-    var state = data.GetProperty("state").GetInt32() switch
-    {
-        2 => SensorState.Active,
-        4 => SensorState.Inactive,
-        _ => SensorState.Unknown
-    };
-
-    if(BlockOccupancyUpdater.Apply(sensor, block, state))
+    if (BlockOccupancyUpdater.Apply(sensor, block, state))
     {
         Console.WriteLine(
             $"[{DateTime.Now:HH:mm:ss}] {sensor.Id}: {sensor.State}" +
@@ -123,3 +126,54 @@ static void UpdateBlockOccupancy(string message, Sensor sensor, Block block)
 }
 
 
+static async Task ConsoleMenuAsync(JmriTurnoutService turnoutService, string turnoutId)
+{
+    var requestedPosition = TurnoutPosition.Unknown;
+    while (true)
+    {
+        Console.WriteLine("=== Menú de Control de Ferrocarril ===");
+        Console.WriteLine("1. CLOSED");
+        Console.WriteLine("2. THROWN");
+        Console.WriteLine("0. Salir");
+        Console.Write("Seleccione una opción: ");
+        var option = Console.ReadLine();
+
+        if (option is null or "0")
+        { 
+            return; 
+        }
+
+        if (option is not "1" and not "2")
+        {
+            Console.WriteLine("Opción no válida.");
+            continue;
+        }
+
+
+        switch (option)
+        {
+            case "1":
+                requestedPosition = TurnoutPosition.Closed;
+                break;
+            case "2":
+                requestedPosition = TurnoutPosition.Thrown;
+                break;
+            default:
+                Console.WriteLine("Opción no válida.");
+                break;
+        }
+        
+        try
+        {
+            await turnoutService.SetTurnoutPosition(turnoutId, requestedPosition, CancellationToken.None);
+            
+            Console.WriteLine($"Posición confirmada por JMRI: {requestedPosition}.");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cambiar la posición del desvío: {ex.Message}");
+        }
+
+    }
+}
