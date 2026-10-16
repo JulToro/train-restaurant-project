@@ -5,6 +5,7 @@ using Railway.Core.Domain;
 using Railway.Core.Services;
 using Railway.Jmri.Client.Parsing;
 using Railway.Jmri.Client.Services;
+using Railway.Control.Spike.Diagnostics;
 
 Console.WriteLine("==================================================");
 Console.WriteLine("  Railway Control Spike - Diagnóstico Inicial    ");
@@ -43,13 +44,14 @@ var options = new JmriClientOptions
 var sensor = new Sensor("I2S1", "Sensor de ocupacion B1");
 var block = new Block("B1", "Bloque de entrada");
 var turnout = new Turnout("I2T1", "Desvio principal");
+var diagnostics = new SimulationDiagnostics();
 
 // 2. Crear el cliente
 await using var client = new JmriWebSocketClient(options);
 
 client.MessageReceived += message =>
 {
-    UpdateBlockOccupancy(message, sensor, block);
+    UpdateBlockOccupancy(message, sensor, block, diagnostics);
 
     if (JmriTurnoutEventParser.TryParse(message, turnout.Id, out var position))
     {
@@ -105,18 +107,19 @@ try
 
     var turnoutService = new JmriTurnoutService(client);
 
-    await ConsoleMenuAsync(turnoutService, turnout.Id);
+    await ConsoleMenuAsync(turnoutService, turnout.Id, diagnostics, client, block, turnout);
 }
 catch (Exception ex)
 {
     Console.WriteLine($"No se pudo establecer la conexion con JMRI: {ex.Message}");
 }
 
-static void UpdateBlockOccupancy(string message, Sensor sensor, Block block)
+static void UpdateBlockOccupancy(string message, Sensor sensor, Block block, SimulationDiagnostics diagnostics)
 {
     if (!JmriSensorEventParser.TryParse(message, sensor.Id, out var state))
         return;
 
+    diagnostics.RecordSensorEvent(state);
     if (BlockOccupancyUpdater.Apply(sensor, block, state))
     {
         Console.WriteLine(
@@ -126,7 +129,12 @@ static void UpdateBlockOccupancy(string message, Sensor sensor, Block block)
 }
 
 
-static async Task ConsoleMenuAsync(JmriTurnoutService turnoutService, string turnoutId)
+static async Task ConsoleMenuAsync(JmriTurnoutService turnoutService, 
+    string turnoutId, 
+    SimulationDiagnostics diagnostics,
+    JmriWebSocketClient client,
+    Block block,
+    Turnout turnout)
 {
     var requestedPosition = TurnoutPosition.Unknown;
     while (true)
@@ -134,6 +142,7 @@ static async Task ConsoleMenuAsync(JmriTurnoutService turnoutService, string tur
         Console.WriteLine("=== Menú de Control de Ferrocarril ===");
         Console.WriteLine("1. CLOSED");
         Console.WriteLine("2. THROWN");
+        Console.WriteLine("3. Mostrar diagnostico");
         Console.WriteLine("0. Salir");
         Console.Write("Seleccione una opción: ");
         var option = Console.ReadLine();
@@ -143,12 +152,26 @@ static async Task ConsoleMenuAsync(JmriTurnoutService turnoutService, string tur
             return; 
         }
 
+        if (option == "3")
+        {
+            var lastEvent = diagnostics.ReadSensorEvent();
+
+            // Aqui mostraremos el resumen de diagnostico.
+            Console.WriteLine("=== Diagnostico de Sensores ===");
+            Console.WriteLine($"Ultimo estado del sensor: {lastEvent.State?.ToString() ?? "Sin eventos"}");
+            Console.WriteLine($"Ultimo estado del cliente JMRI: {client.State}");
+            Console.WriteLine($"Ultimo estado del bloque: { block.Occupancy }");
+            Console.WriteLine($"Ultimo estado del desvío: { turnout.Position }");
+            Console.WriteLine( $"Ultimo evento del sensor: " + $"{lastEvent.ReceivedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "Sin eventos"}");
+
+            continue;
+        }
+
         if (option is not "1" and not "2")
         {
             Console.WriteLine("Opción no válida.");
             continue;
         }
-
 
         switch (option)
         {
