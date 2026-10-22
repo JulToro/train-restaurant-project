@@ -1,6 +1,7 @@
 # Issue #51 — Documentar y validar la alimentación del circuito físico
 
-**Estado:** prueba conjunta de reed y servo reportada durante aproximadamente dos minutos sin calentamiento, reinicios ni movimientos inesperados; fotografías del montaje incorporadas. Falta evidenciar la conexión a la fuente externa y confirmar el límite de corriente de la prueba.  
+**Estado:** documentación y prueba funcional básica registradas; fotografías del montaje incorporadas. Por decisión del usuario, la fotografía de la fuente se difiere y no se añade como requisito de cierre del issue. El límite de corriente de la prueba conjunta no quedó reconfirmado.
+
 **Actualización documental:** 22 de octubre de 2026.  
 **Objetivo:** documentar y validar la alimentación entre fuente, ESP32, PCA9685, sensor y actuador, distinguiendo los resultados registrados de las comprobaciones pendientes.
 
@@ -102,7 +103,7 @@ El detalle del firmware y del montaje se conserva en [resumen-esp32-pca9685.md](
 - [Circuito completo](Circuito%20completo.JPG): muestra ESP32 alimentado por USB, reed en protoboard, PCA9685 y cable del actuador. La fuente externa no aparece en el encuadre. El borne verde de alimentación de la PCA9685 se ve sin cables; la imagen no demuestra la alimentación externa durante el ensayo.
 - [Conexiones del ESP32](Conexiones%20ESP32.JPG): detalle de ESP32, reed y parte del cableado hacia la PCA9685. No permite verificar por sí sola todos los números de pin ni el recorrido completo de los retornos de tierra.
 
-Estas imágenes documentan el montaje, pero no sustituyen la evidencia de la fuente conectada, sus ajustes ni las mediciones. Falta una vista que permita seguir el positivo externo hasta V+ y el negativo hasta el GND común; si la alimentación entra por otro conector, identificarlo explícitamente.
+Estas imágenes documentan el montaje, pero no permiten verificar la conexión completa de la fuente ni sus ajustes. El usuario decidió no incorporar esa fotografía por ahora; se conserva esta limitación de la evidencia sin añadir la foto como requisito de cierre. El recorrido de alimentación y GND se describe en el diagrama y las tablas.
 
 ### Salida serie del reed reportada el 22 de octubre de 2026
 
@@ -160,20 +161,20 @@ La salida es el extracto comunicado; no permite calcular por sí sola la duraci�
 |---|---|
 | Existe un diagrama de conexiones y voltajes. | Incluido con reed en GPIO27 confirmado por el usuario y dos fotografías del montaje enlazadas. |
 | Se identifica qué componentes usan 3,3 V, 5 V y alimentación del actuador. | Dominios identificados; el reed usa pull-up a 3,3 V y contacto hacia GND, sin alimentación propia. |
-| La fuente del actuador no alimenta directamente el ESP32. | El montaje registrado usa USB para ESP32 y fuente externa para V+. Las fotos muestran USB, pero falta una vista de la conexión externa que evidencie la separación de positivos. |
-| Las tierras requeridas están unidas correctamente. | GND común descrito para ESP32, PCA9685 y fuente; falta evidencia del recorrido del negativo de la fuente hasta ese GND común. |
+| La fuente del actuador no alimenta directamente el ESP32. | El montaje registrado usa USB para ESP32 y fuente externa para V+. Separación descrita; las fotos muestran USB, pero no toda la conexión externa. Fotografía de la fuente diferida por decisión del usuario. |
+| Las tierras requeridas están unidas correctamente. | GND común descrito para ESP32, PCA9685 y fuente. Las fotografías disponibles no permiten verificar todo el recorrido del negativo externo. |
 | Se realiza una prueba de encendido sin calentamiento, cortocircuito ni comportamiento inesperado. | Prueba conjunta de aproximadamente dos minutos registrada, sin calentamiento, reinicios ni movimientos inesperados reportados. Adjuntar evidencia y confirmar la comprobación específica de cortocircuitos. |
 
-### Trabajo pendiente
+### Seguimiento documental
 
 - [x] Seleccionar el reed y registrar su lectura individual al acercar y retirar el imán.
 - [x] Confirmar GPIO27 como entrada del reed en el montaje probado.
 - [x] Registrar una prueba de encendido del conjunto, con duración y observaciones de anomalías reportadas por el usuario.
 - [x] Aclarar el origen de las lecturas: pantalla de la fuente, 5 V y 0,092 A indicados durante el giro en uno de los sentidos.
 - [x] Completar la lectura indicada en el sentido contrario: 0,121 A en la pantalla de la fuente.
-- [ ] Confirmar el límite de corriente utilizado en la prueba conjunta.
+- [ ] Dato complementario pendiente: reconfirmar el límite de corriente utilizado en la prueba conjunta; el ensayo anterior registró 1,000 A.
 - [x] Enlazar las dos fotografías aportadas del montaje y el extracto serie de la prueba conjunta.
-- [ ] Añadir evidencia de la fuente conectada a V+/GND, su ajuste de 5 V y el límite de corriente empleado; identificar la separación de positivos y el GND común.
+- [x] Registrar la decisión del usuario de diferir la fotografía de la fuente; no se exige como evidencia adicional para este cierre.
 - [ ] Actualizar esta tabla y el comentario del issue con los resultados efectivamente obtenidos.
 
 ### Registro de la prueba conjunta y datos por completar
@@ -185,11 +186,11 @@ La salida es el extracto comunicado; no permite calcular por sí sola la duraci�
 | Fuente y ajustes de la prueba final | Se reportaron 5 V; confirmar fuente y límite de corriente. El ensayo anterior usó NANKADF a 5,00 V con límite de 1,000 A. |
 | Voltaje indicado durante la prueba | 5 V en la pantalla de la fuente. No se reportaron nuevas mediciones con multímetro en V+ ni VCC; el ensayo anterior registra aproximadamente 5 V en V+. |
 | Corriente durante la prueba | Indicador de la fuente: 0 a 0,092 A y vuelta a 0 A en un sentido; 0,121 A en el contrario. No se establece un pico máximo real ni corriente de bloqueo. |
-| Comprobación de polaridad, separación de positivos y GND común | Diagrama y montaje descritos; fotografías parciales incorporadas. Falta evidenciar la conexión externa a V+/GND y su separación respecto de la alimentación del ESP32. |
+| Comprobación de polaridad, separación de positivos y GND común | Diagrama y montaje descritos; fotografías parciales incorporadas. La conexión externa completa no puede verificarse visualmente con estas imágenes; fotografía de la fuente diferida. |
 | Respuesta del sensor al acercar/retirar el imán | Confirmada por el usuario y salida serie en la prueba conjunta. |
 | Movimiento y parada del actuador | Funcionamiento conjunto confirmado; salida serie con consignas de 1600, 1700 y 1800 µs. |
 | Calentamiento, cortocircuitos, reinicios u otros comportamientos inesperados | Sin calentamiento observado, reinicios ni movimientos inesperados durante aproximadamente dos minutos. Comprobación específica de cortocircuitos no detallada. |
-| Resultado y enlaces a evidencias | Prueba funcional conjunta satisfactoria según el reporte del usuario; salida serie transcrita y dos fotografías enlazadas arriba. Pendiente evidencia de la fuente conectada y de sus ajustes. |
+| Resultado y enlaces a evidencias | Prueba funcional conjunta satisfactoria según el reporte del usuario; salida serie transcrita y dos fotografías enlazadas arriba. Fotografía de la fuente diferida; límite de corriente de la prueba conjunta no reconfirmado. |
 
 ## Riesgos y decisiones pendientes
 
@@ -197,7 +198,7 @@ La salida es el extracto comunicado; no permite calcular por sí sola la duraci�
 - La serigrafía del PCA9685 indica V+ ≤ 6 V, pero no indica la corriente total admisible de la placa o sus conectores.
 - El módulo Hall HW-477 no permite leer con certeza el número de parte del sensor ni la topología de salida. No conectar su señal al ESP32 hasta validar su nivel lógico.
 - La placa TC1508A queda fuera del circuito del MG90S. No aplicar 12/24 V a esa placa: el chip tiene un máximo absoluto de 7,2 V. Los valores máximos del chip no son una especificación de corriente garantizada para el módulo completo.
-- La prueba funcional conjunta está registrada con un alcance de aproximadamente dos minutos, GPIO27 confirmado y lecturas de corriente de ambos sentidos. Las fotografías del montaje están incorporadas; falta evidenciar el cableado de la fuente externa y confirmar el límite de corriente utilizado. El resultado no caracteriza funcionamiento prolongado o bajo carga.
+- La prueba funcional conjunta está registrada con un alcance de aproximadamente dos minutos, GPIO27 confirmado y lecturas de corriente de ambos sentidos. Las fotografías del montaje están incorporadas; la fotografía de la fuente se difiere por decisión del usuario y el límite de corriente de la prueba conjunta no se reconfirmó. El resultado no caracteriza funcionamiento prolongado o bajo carga.
 
 ## Referencias técnicas
 
