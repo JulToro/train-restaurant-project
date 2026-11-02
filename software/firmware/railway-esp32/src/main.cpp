@@ -1,23 +1,84 @@
-// Todo lo que aparece después de // es un comentario: no se ejecuta.
-// #include permite usar las herramientas de Arduino, como Serial y millis().
+// main.cpp coordina el programa. La conexión y la memoria viven en otros archivos.
 #include <Arduino.h>
+#include "AppConfig.h"
+#include "WifiController.h"
+#include "SetupPortal.h"
 
-// constexpr define una constante cuyo valor se conoce al compilar el programa.
-// unsigned long es un tipo de número entero sin signo (no guarda negativos).
-// El signo = asigna el valor; el punto y coma ; termina la instrucción.
-constexpr unsigned long SERIAL_BAUD_RATE = 115200; // Velocidad del puerto serie.
-constexpr unsigned long HEARTBEAT_INTERVAL_MS = 5000; // 5000 ms = 5 segundos.
-
-// char representa un carácter. char NOMBRE[] guarda una secuencia de caracteres.
-// Las comillas dobles delimitan el texto; [] deja que C++ calcule su tamaño.
-// Estos nombres en MAYÚSCULAS son una convención para identificar constantes.
-constexpr char DEVICE_ID[] = "railway-esp32-01"; // Identificación de esta placa.
-constexpr char FIRMWARE_VERSION[] = "0.1.0"; // Versión de este programa.
-
-// Una variable puede cambiar de valor durante la ejecución.
-// Esta guarda cuándo enviamos el último mensaje de actividad, en milisegundos.
-// Está fuera de las funciones para conservar su valor entre llamadas a loop().
+// Estado propio de la consola USB y del latido.
 unsigned long lastHeartbeat = 0;
+String commandBuffer;
+bool discardCommand = false;
+
+void printHelp() {
+    Serial.println("[USB] Comandos disponibles (terminar con Enter):");
+    Serial.println("  wifi scan  (listar redes cercanas de 2,4 GHz)");
+    Serial.println("  wifi ssid <nombre de red>");
+    Serial.println("  wifi password <contrasena de 8 a 63 caracteres ASCII>");
+    Serial.println("  wifi connect  |  wifi status  |  wifi forget  |  help");
+    Serial.println("  wifi setup  |  wifi setup stop  (abrir/cerrar el portal web)");
+    Serial.println("[USB] Sin comillas. Configura SSID y luego password; connect prueba y guarda.");
+}
+
+// const String& permite consultar el texto recibido sin copiarlo ni modificarlo.
+void handleCommand(const String& command) {
+    // Evita cambiar la conexión mientras la radio está ocupada buscando redes.
+    // La consulta de estado y la ayuda siguen disponibles.
+    if (WifiController::isScanning() && command.length() > 0 && command != "help" &&
+        command != "wifi status" && command != "wifi scan") {
+        Serial.println("[WIFI] Espera a que termine la busqueda antes de cambiar la configuracion.");
+        return;
+    }
+    if (command == "help") {
+        printHelp();
+    } else if (command == "wifi scan") {
+        WifiController::startScan();
+    } else if (command.startsWith("wifi ssid ")) {
+        // substring(10) quita "wifi ssid " y entrega solo el nombre al controlador.
+        WifiController::setSsid(command.substring(10));
+    } else if (command.startsWith("wifi password ")) {
+        WifiController::setPassword(command.substring(14));
+    } else if (command == "wifi connect") {
+        WifiController::connect(true);
+    } else if (command == "wifi status") {
+        WifiController::printStatus();
+    } else if (command == "wifi setup") {
+        SetupPortal::start();
+    } else if (command == "wifi setup stop") {
+        SetupPortal::stop();
+    } else if (command == "wifi forget") {
+        WifiController::forget();
+    } else if (command.length() > 0) {
+        // No repetimos el texto recibido: podría contener una contraseña.
+        Serial.println("[ERROR] Comando desconocido. Escribe help.");
+    }
+}
+
+void readSerialCommands() {
+    // available() indica cuántos bytes hay por leer. El límite evita que una entrada
+    // continua ocupe toda la ejecución y retrase el latido o el control del Wi-Fi.
+    for (size_t count = 0; count < 64 && Serial.available() > 0; count++) {
+        const char character = static_cast<char>(Serial.read()); // Convierte a carácter.
+        if (character == '\n' || character == '\r') { // Fin de línea: LF o CR.
+            if (!discardCommand) { // ! significa "no".
+                handleCommand(commandBuffer);
+            }
+            commandBuffer = "";
+            discardCommand = false;
+        } else if (character == '\b' || character == 127) { // Tecla de borrar.
+            if (commandBuffer.length() > 0) {
+                commandBuffer.remove(commandBuffer.length() - 1);
+            }
+        } else if (!discardCommand) {
+            if (commandBuffer.length() >= AppConfig::MAX_COMMAND_LENGTH) {
+                commandBuffer = "";
+                discardCommand = true; // Descarta la línea completa si es muy larga.
+                Serial.println("[ERROR] Comando demasiado largo. Vuelve a escribirlo.");
+            } else {
+                commandBuffer += character; // += añade un carácter al texto acumulado.
+            }
+        }
+    }
+}
 
 // Una función agrupa instrucciones. () contiene sus parámetros; aquí no hay ninguno.
 // void significa que la función no devuelve un resultado a quien la llama.
@@ -27,7 +88,7 @@ void setup() {
     // Serial es el objeto que usamos para comunicarnos con el monitor serie.
     // El punto . permite llamar a una de sus funciones, en este caso begin().
     // El valor entre paréntesis indica la velocidad: el monitor debe usar la misma.
-    Serial.begin(SERIAL_BAUD_RATE);
+    Serial.begin(AppConfig::SERIAL_BAUD_RATE);
 
     // Pausa el programa 1000 milisegundos para dar un margen al iniciar el puerto.
     delay(1000);
@@ -41,13 +102,17 @@ void setup() {
 
     // print() escribe sin saltar de línea: el identificador aparecerá a continuación.
     Serial.print("[INFO] Device: ");
-    Serial.println(DEVICE_ID); // Escribe el valor de la constante y termina la línea.
+    Serial.println(AppConfig::DEVICE_ID); // Escribe el valor de la constante y termina la línea.
 
     Serial.print("[INFO] Version: ");
-    Serial.println(FIRMWARE_VERSION); // Muestra la versión del firmware.
+    Serial.println(AppConfig::FIRMWARE_VERSION); // Muestra la versión del firmware.
 
     // Es un mensaje definido por nosotros: indica que llegamos a este punto.
     Serial.println("[INFO] Status: RUNNING");
+
+    printHelp();
+    WifiController::begin();
+    SetupPortal::begin();
 
     // millis() devuelve los milisegundos transcurridos desde el inicio del programa.
     // Guardamos el momento actual para esperar 5 segundos antes del primer latido.
@@ -56,6 +121,12 @@ void setup() {
 
 // Después de setup(), Arduino llama a loop() una y otra vez mientras está encendido.
 void loop() {
+    // Leer comandos y comprobar el Wi-Fi en cada vuelta permite seguir atendiendo
+    // la consola y enviando latidos incluso mientras intentamos conectarnos.
+    readSerialCommands();
+    WifiController::update();
+    SetupPortal::update();
+
     // const impide modificar esta variable después de inicializarla.
     // now es una variable local: se crea en cada llamada y solo existe en esta función.
     const unsigned long now = millis();
@@ -64,7 +135,7 @@ void loop() {
     // La resta calcula cuánto tiempo ha pasado desde el último mensaje.
     // >= significa "mayor o igual que": aquí preguntamos si ya pasaron 5000 ms.
     // Con unsigned long, esta resta también funciona cuando millis() vuelve a cero.
-    if (now - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
+    if (now - lastHeartbeat >= AppConfig::HEARTBEAT_INTERVAL_MS) {
         // Actualiza el momento del último latido para empezar a contar el siguiente.
         lastHeartbeat = now;
 
