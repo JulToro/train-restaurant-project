@@ -1,5 +1,96 @@
 # Firmware base del ESP32
 
+## Dos reeds en MCP23017 (version actual: 0.5.1)
+
+La versión 0.5.1 ajusta el puerto A de 0.5.0 al puerto B, según el cableado PB0/PB1 reportado por el usuario. La lectura pasa de GPIO27 a **dos entradas del MCP23017 en 0x27**. Con USB y fuente externa desconectados, conecta:
+
+| Sensor | Un terminal | Otro terminal |
+| --- | --- | --- |
+| `entrada` | MCP23017 **GPB0** (también puede figurar como PB0 o B0 del banco de GPIO) | GND común |
+| `salida` | MCP23017 **GPB1** (PB1 o B1 del banco de GPIO) | GND común |
+
+Los reeds no tienen polaridad ni necesitan positivo. No confundas GPB0/GPB1 con **A0/A1/A2 de selección de dirección**: esos puentes conservan la dirección 0x27 del montaje. Identifica las etiquetas de tu placa antes de cablear. Ambos pines de sensores son entradas digitales; los nombres `entrada` y `salida` indican su función futura en la vía.
+
+SDA/SCL siguen en GPIO21/GPIO22, compartidos con PCA9685; lógica a 3,3 V y GND común. RESET del MCP permanece alto. El firmware configura el expansor mediante `Wire`, sin otra biblioteca: BANK=0, GPB0/GPB1 con pull-up, GPA7/GPB7 como salidas bajas sin uso y los demás GPIO como entradas sin pull-up. Este módulo administra todo el MCP; deja las otras conexiones de GPIO sin usar por ahora.
+
+Después de **Build** y **Upload**, abre **Monitor** a 115200, pulsa EN/RESET y comprueba versión 0.5.1. Sin imanes se espera:
+
+```text
+[SENSOR] entrada (GPB0): INACTIVO (iman no detectado)
+[SENSOR] salida (GPB1): INACTIVO (iman no detectado)
+```
+
+Acerca un imán a cada reed por separado, mantenlo y retíralo: solo su nombre debe cambiar a `ACTIVO` y volver a `INACTIVO`. Prueba ambos activos a la vez y reinicia con el imán presente. `sensor status` consulta los dos estados; `i2c scan` sigue comprobando las direcciones. Repite con el portal y durante `wifi scan`, observando que continúan los latidos.
+
+Cada sensor tiene antirrebote independiente de 30 ms y se consulta el puerto cada 5 ms como mínimo, según la disponibilidad del bucle. Una presencia estable genera un solo mensaje; al arrancar, ambos estados empiezan en `PENDIENTE`. Un fallo de comunicación, lectura incompleta o pérdida de configuración del MCP invalida ambos estados como `DESCONOCIDO`. Se intenta reconfigurar cada segundo; al recuperarse se estabilizan otra vez durante 30 ms. Para validar recuperación física, apaga todo, desconecta el MCP y arranca: debe mostrar `DESCONOCIDO`; apaga, reconecta y repite. No manipules el cableado energizado. El muestreo no garantiza detectar pulsos breves y un cable de reed cortado se interpreta como contacto abierto: no hay supervisión de ese cable.
+
+Validación de desarrollo de 0.5.1: `pio run` terminó en `SUCCESS`. Una prueba temporal C++ con reloj e I²C simulados pasó lecturas independientes y simultáneas, rebotes, ausencia de duplicados, dispositivo ausente, lectura incompleta, recuperación, reinicio del MCP y desbordamiento de tiempo. Todavía no se calcula ocupación del bloque ni se controla el servo ni se envían eventos a .NET/JMRI.
+
+### Prueba física reportada el 2 de noviembre de 2026
+
+El usuario confirmó que corrigió un problema de conexión y compartió transiciones repetidas de ambos reeds con 0.5.1. La salida muestra GPB0 (`entrada`) y GPB1 (`salida`) alternando entre activo e inactivo; los latidos continúan, incluidos los de 186 y 191 segundos:
+
+```text
+[HEARTBEAT] Uptime: 186 seconds
+[SENSOR] salida (GPB1): ACTIVO (iman detectado)
+[SENSOR] salida (GPB1): INACTIVO (iman no detectado)
+[SENSOR] entrada (GPB0): ACTIVO (iman detectado)
+[SENSOR] entrada (GPB0): INACTIVO (iman no detectado)
+[HEARTBEAT] Uptime: 191 seconds
+```
+
+El registro de arranque compartido previamente confirma versión 0.5.1, configuración de ambos pull-ups y respuestas I²C en 0x27 y 0x40 sin errores de bus. Esto documenta la lectura física básica de ambos sensores y su publicación por consola. No mide los rebotes eléctricos ni verifica el umbral de 30 ms en hardware.
+
+En la comprobación posterior, el usuario confirmó que el comportamiento era correcto y compartió una activación y desactivación de GPB1 durante `wifi scan`, con latidos antes y durante la búsqueda y resultados de redes al finalizar:
+
+```text
+[HEARTBEAT] Uptime: 356 seconds
+[WIFI] Buscando redes de 2,4 GHz...
+[SENSOR] salida (GPB1): ACTIVO (iman detectado)
+[SENSOR] salida (GPB1): INACTIVO (iman no detectado)
+[HEARTBEAT] Uptime: 361 seconds
+[WIFI] Nombre de red (SSID) | Senal | Seguridad
+```
+
+La captura confirma lectura de GPB1 durante la búsqueda Wi-Fi sin detener los latidos. No permite medir cuánto tiempo se mantuvo el imán ni verifica GPB0 durante esa búsqueda. Activación simultánea, arranque con imán y recuperación del expansor siguen pendientes de confirmación física; la ausencia de duplicados con un imán mantenido no está cronometrada en los registros.
+
+Las secciones siguientes conservan instrucciones y evidencia de versiones anteriores; la conexión actual de los sensores es la descrita arriba.
+
+## Comprobar MCP23017 y PCA9685 (0.4.2)
+
+El firmware inicia I²C en GPIO21/SDA y GPIO22/SCL a 100 kHz. Ambos modulos comparten SDA, SCL y GND; su lógica usa 3,3 V. La alimentación V+ de 5 V del servo sigue separada. El firmware espera el MCP23017 en **0x27**, de acuerdo con la respuesta observada en el montaje. En ese chip, A0/A1/A2 altos seleccionan 0x27; todos a GND seleccionan 0x20. RESET debe mantenerse alto. Verifica los pull-ups de SDA/SCL a 3,3 V antes de energizar.
+
+Después de **Upload**, abre **Monitor** a 115200 y reinicia. La versión 0.4.2 busca automáticamente direcciones 0x08..0x77, consultando una por vuelta con un timeout de 25 ms por transacción. Puedes repetir con `i2c scan`, también durante `wifi scan`. Se espera:
+
+```text
+[I2C] MCP23017 esperado en 0x27: RESPONDE
+[I2C] PCA9685 esperado en 0x40: RESPONDE
+```
+
+Una respuesta confirma presencia en esa dirección, no identifica el chip ni verifica sensores o actuadores. Pueden aparecer otras direcciones (por ejemplo, la dirección colectiva de la PCA9685). Si aparece `SIN RESPUESTA`, revisa alimentación, SDA/SCL, dirección y RESET con el montaje apagado. Los errores de bus se distinguen de direcciones sin respuesta.
+
+Esta versión comprueba comunicación; **todavía no configura ni lee las entradas del MCP23017**. `sensor status` sigue consultando el reed en GPIO27. Si ya lo moviste al expansor, ese comando no representa su estado. El usuario reportó con 0.4.1 respuestas en 0x27 y 0x40, dos direcciones y cero errores de bus; esto confirma comunicación en esas direcciones, no identifica automáticamente los modelos. La versión 0.4.2 ajusta la dirección esperada del MCP23017 a ese montaje. El escáner no mueve el servo.
+
+La versión 0.4.0 integra la lectura del reed del issue #53 con el montaje documentado en el issue #51: GPIO27, contacto hacia GND y antirrebote de 30 ms.
+
+## Probar el sensor reed (issue #53)
+
+Con el ESP32 apagado, conserva o comprueba el reed entre **GPIO27 y GND**. No requiere alimentación propia. Se usa `INPUT_PULLUP`: contacto cerrado = `LOW` = activo. El Hall HW-477 queda fuera de esta integración. El registro anterior está en [el cableado del issue #51](../../../docs/05-electronics/issues/51/issue-51-cableado-seguro.md).
+
+`include/OccupancySensor.h` y `src/OccupancySensor.cpp` implementan la lectura; `AppConfig.h` define el pin, el nivel activo y los 30 ms. `main.cpp` inicializa el módulo y lo atiende en cada vuelta. Un cambio debe permanecer estable durante 30 ms antes de publicarse, incluido el estado inicial. La lectura usa `millis()` y no añade esperas. Una activación más corta puede descartarse; la prueba con pasadas rápidas determinará si hace falta ajustar el tiempo. Las operaciones de Wi-Fi/HTTP pueden retrasar el muestreo; esta lectura por sondeo no garantiza capturar pulsos breves.
+
+1. Ejecuta **Build**, después **Upload** y abre **Monitor** a 115200 baudios. Reinicia para ver la versión 0.4.0.
+2. Sin imán, espera `[SENSOR] Estado: INACTIVO (iman no detectado)`.
+3. Acerca el imán y mantenlo: debe aparecer una sola vez `[SENSOR] Estado: ACTIVO (iman detectado)`.
+4. Retíralo: debe aparecer una sola transición a `INACTIVO`. Repite varias veces y prueba también pasadas rápidas.
+5. Escribe `sensor status`: consulta el estado confirmado. Antes de estabilizarse la lectura inicial muestra `PENDIENTE`.
+6. Reinicia con el imán cerca: debe informar `ACTIVO` después de estabilizarse.
+7. Repite con `wifi scan` y con el portal abierto mediante `wifi setup`. Deben seguir los latidos y la lectura; `sensor status` también está disponible durante la búsqueda.
+
+El sensor informa presencia del imán en ese punto; no determina por sí solo la ocupación de todo un tramo. Esta versión no acciona el servo ni envía eventos a .NET/JMRI. La validación física del firmware integrado está pendiente: conserva las salidas de Build/Upload y las transiciones observadas antes de cerrar el issue #53.
+
+Validación de desarrollo: `pio run` terminó en `SUCCESS` para `esp32dev` con Arduino 3.3.12. Una prueba temporal en C++ con GPIO, reloj y consola simulados verificó el estado inicial, el umbral de 30 ms, rebotes en ambos sentidos, ausencia de eventos repetidos, arranque con imán y desbordamiento del reloj. Estas comprobaciones no sustituyen la prueba del sensor en la placa.
+
 Firmware del [issue #52](https://github.com/JulToro/train-restaurant-project/issues/52): proyecto PlatformIO con Arduino Framework, identificación por consola, señal periódica de ejecución y configuración Wi-Fi por USB o formulario web local.
 
 ## Configuración

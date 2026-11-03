@@ -3,6 +3,8 @@
 #include "AppConfig.h"
 #include "WifiController.h"
 #include "SetupPortal.h"
+#include "OccupancySensor.h"
+#include "I2cBus.h"
 
 // Estado propio de la consola USB y del latido.
 unsigned long lastHeartbeat = 0;
@@ -16,6 +18,8 @@ void printHelp() {
     Serial.println("  wifi password <contrasena de 8 a 63 caracteres ASCII>");
     Serial.println("  wifi connect  |  wifi status  |  wifi forget  |  help");
     Serial.println("  wifi setup  |  wifi setup stop  (abrir/cerrar el portal web)");
+    Serial.println("  sensor status  (consultar los reeds en MCP23017 GPB0 y GPB1)");
+    Serial.println("  i2c scan  (comprobar direcciones del MCP23017 y PCA9685)");
     Serial.println("[USB] Sin comillas. Configura SSID y luego password; connect prueba y guarda.");
 }
 
@@ -24,12 +28,17 @@ void handleCommand(const String& command) {
     // Evita cambiar la conexión mientras la radio está ocupada buscando redes.
     // La consulta de estado y la ayuda siguen disponibles.
     if (WifiController::isScanning() && command.length() > 0 && command != "help" &&
-        command != "wifi status" && command != "wifi scan") {
+        command != "wifi status" && command != "wifi scan" && command != "sensor status" &&
+        command != "i2c scan") {
         Serial.println("[WIFI] Espera a que termine la busqueda antes de cambiar la configuracion.");
         return;
     }
     if (command == "help") {
         printHelp();
+    } else if (command == "sensor status") {
+        OccupancySensor::printStatus();
+    } else if (command == "i2c scan") {
+        I2cBus::startScan();
     } else if (command == "wifi scan") {
         WifiController::startScan();
     } else if (command.startsWith("wifi ssid ")) {
@@ -111,6 +120,8 @@ void setup() {
     Serial.println("[INFO] Status: RUNNING");
 
     printHelp();
+    I2cBus::begin();
+    OccupancySensor::begin();
     WifiController::begin();
     SetupPortal::begin();
 
@@ -121,6 +132,8 @@ void setup() {
 
 // Después de setup(), Arduino llama a loop() una y otra vez mientras está encendido.
 void loop() {
+    OccupancySensor::update();
+    I2cBus::update();
     // Leer comandos y comprobar el Wi-Fi en cada vuelta permite seguir atendiendo
     // la consola y enviando latidos incluso mientras intentamos conectarnos.
     readSerialCommands();
