@@ -33,6 +33,8 @@ Esto no es todavía el producto completo ni una arquitectura de microservicios. 
 | [switch-management.md](switch-management.md) | Gestión de desvíos. |
 | [train-control.md](train-control.md) | Control de trenes. |
 | [integrations.md](integrations.md) | Integraciones externas. |
+| [api/contracts.md](api/contracts.md) | Contrato MQTT ESP32 ↔ .NET: sensores, sincronización, disponibilidad, desvíos y errores (issue #54). |
+| [mosquitto-local-macos.md](mosquitto-local-macos.md) | Instalación local de Mosquitto en macOS, prueba MQTT y seguimiento de validación (issue #54). |
 
 ## Decisiones arquitectónicas
 

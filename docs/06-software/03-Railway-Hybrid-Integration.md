@@ -30,7 +30,7 @@ El PCA9685 es un expansor PWM, no un controlador de red autónomo. El ESP32 reci
 Orden T1 = THROWN → ESP32 → I²C → PCA9685 → servo → desvío
 ```
 
-Queda pendiente elegir el protocolo del ESP32: MQTT recomendado para telemetría/control de accesorios, o una integración compatible con DCC accesorios.
+Se eligió MQTT con mensajes JSON para el controlador ESP32. El [contrato ESP32 ↔ .NET](api/contracts.md) define sensores, sincronización, disponibilidad, órdenes y confirmaciones de desvío, sin campo de versión. La implementación y las pruebas físicas de este contrato siguen pendientes.
 
 ## 4. Parada de emergencia
 

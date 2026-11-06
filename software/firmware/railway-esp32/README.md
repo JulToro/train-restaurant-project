@@ -1,5 +1,11 @@
 # Firmware base del ESP32
 
+## Comunicación MQTT: preparación local
+
+La [guía de Mosquitto local en macOS](../../../docs/06-software/mosquitto-local-macos.md) documenta la instalación con Homebrew, la prueba de publicación y recepción, el servicio opcional y el seguimiento de validación para el issue #54. La instalación y la prueba local quedaron verificadas el 5 de noviembre de 2026; el acceso desde ESP32 y la migración futura a Docker se tratarán después.
+
+El [contrato MQTT ESP32 ↔ .NET](../../../docs/06-software/api/contracts.md) define los mensajes del issue #54 y su interpretación. Es una especificación pendiente de implementación; los sensores conservarán IDs fijos y .NET interpretará entrada/salida según el recorrido.
+
 ## Dos reeds en MCP23017 (version actual: 0.5.1)
 
 La versión 0.5.1 ajusta el puerto A de 0.5.0 al puerto B, según el cableado PB0/PB1 reportado por el usuario. La lectura pasa de GPIO27 a **dos entradas del MCP23017 en 0x27**. Con USB y fuente externa desconectados, conecta:
